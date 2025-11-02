@@ -8,6 +8,7 @@ import sys
 import logging
 import re
 import smtplib
+import time
 from datetime import datetime
 from typing import List
 from email.message import EmailMessage
@@ -19,6 +20,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.action_chains import ActionChains
+from selenium.common.exceptions import StaleElementReferenceException, TimeoutException
 import psycopg
 from dotenv import load_dotenv
 
@@ -85,6 +87,51 @@ def create_chrome_driver() -> webdriver.Chrome:
     return driver
 
 
+def safe_click_with_retry(driver, locator, wait_time=15, max_retries=3):
+    """
+    Tenta clicar em um elemento com retry para evitar StaleElementReferenceException
+
+    Args:
+        driver: Instância do WebDriver
+        locator: Tupla (By.TYPE, "value") para localizar o elemento
+        wait_time: Tempo de espera em segundos
+        max_retries: Número máximo de tentativas
+
+    Returns:
+        True se o clique foi bem-sucedido
+
+    Raises:
+        Exception se todas as tentativas falharem
+    """
+    for attempt in range(max_retries):
+        try:
+            element = WebDriverWait(driver, wait_time).until(
+                EC.element_to_be_clickable(locator)
+            )
+            # Adicionar pequeno delay para estabilizar
+            time.sleep(0.5)
+
+            # Tentar clicar com ActionChains
+            actions = ActionChains(driver)
+            actions.move_to_element(element).click().perform()
+
+            logger.info(f"Clique bem-sucedido no elemento {locator}")
+            return True
+
+        except StaleElementReferenceException:
+            logger.warning(f"Tentativa {attempt + 1}/{max_retries}: Elemento obsoleto, tentando novamente...")
+            if attempt == max_retries - 1:
+                raise
+            time.sleep(1)
+        except Exception as e:
+            logger.warning(f"Tentativa {attempt + 1}/{max_retries}: Erro {type(e).__name__}, tentando novamente...")
+            if attempt == max_retries - 1:
+                raise
+            time.sleep(1)
+
+    return False
+
+
 def fetch_publications(search_term: str = SEARCH_TERM) -> List[str]:
     """
     Realiza scraping do site do DOERJ e retorna lista de datas encontradas
@@ -105,15 +152,12 @@ def fetch_publications(search_term: str = SEARCH_TERM) -> List[str]:
         input_box = WebDriverWait(driver, 15).until(
             EC.presence_of_element_located((By.NAME, "textobusca"))
         )
+        input_box.clear()
         input_box.send_keys(search_term)
         logger.info(f"Campo de busca preenchido com '{search_term}'")
 
-        # Clicar no botão de busca
-        button = WebDriverWait(driver, 15).until(
-            EC.element_to_be_clickable((By.NAME, "buscar"))
-        )
-        actions = ActionChains(driver)
-        actions.move_to_element(button).click().perform()
+        # Clicar no botão de busca com retry
+        safe_click_with_retry(driver, (By.NAME, "buscar"), wait_time=15, max_retries=3)
         logger.info("Botão de busca clicado")
 
         # Aguardar resultados
