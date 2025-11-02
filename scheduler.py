@@ -47,7 +47,7 @@ def run_scraper():
 
 
 # Agendar execução diária às 11:30
-schedule.every().day.at("11:30").do(run_scraper)
+schedule.every().day.at("11:40").do(run_scraper)
 
 # Mensagem de inicialização
 logger.info("=" * 60)
