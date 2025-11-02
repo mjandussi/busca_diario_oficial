@@ -47,7 +47,7 @@ def run_scraper():
 
 
 # Agendar execução diária às 11:30
-schedule.every().day.at("11:44").do(run_scraper)
+schedule.every().day.at("11:30").do(run_scraper)
 
 # Mensagem de inicialização
 logger.info("=" * 60)
@@ -61,6 +61,6 @@ logger.info("=" * 60)
 try:
     while True:
         schedule.run_pending()
-        time.sleep(60)  # Verifica a cada 1 minuto
+        time.sleep(300)  # Verifica a cada 5 minutos
 except KeyboardInterrupt:
     logger.info("Scheduler encerrado pelo usuário")
