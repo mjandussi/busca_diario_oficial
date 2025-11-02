@@ -19,7 +19,6 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.action_chains import ActionChains
-from webdriver_manager.chrome import ChromeDriverManager
 import psycopg
 from dotenv import load_dotenv
 
@@ -69,6 +68,7 @@ def get_db_connection():
 def create_chrome_driver() -> webdriver.Chrome:
     """Cria e configura uma instância do Chrome WebDriver"""
     options = Options()
+    options.binary_location = "/usr/bin/chromium"
 
     if HEADLESS:
         options.add_argument("--headless=new")
@@ -77,7 +77,8 @@ def create_chrome_driver() -> webdriver.Chrome:
         options.add_argument("--disable-gpu")
         logger.info("Chrome configurado em modo headless")
 
-    service = Service(ChromeDriverManager().install())
+    # Selenium Manager gerencia o driver automaticamente (Selenium 4.6+)
+    service = Service("/usr/bin/chromedriver")
     driver = webdriver.Chrome(service=service, options=options)
     driver.set_page_load_timeout(30)
 

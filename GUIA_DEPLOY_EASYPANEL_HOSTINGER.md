@@ -155,7 +155,7 @@ git push origin main
 
 ### 4.3 Configurar Build no EasyPanel
 
-1. No serviço `decreto-scraper`, vá em **Build**
+1. No serviço `scraper-decreto-rec-e-dps`, vá em **Build**
 2. Dockerfile Path: `Dockerfile` (deve detectar automaticamente)
 3. Clique em **Deploy** ou **Build**
 4. Aguarde o build completar (pode levar alguns minutos)
@@ -166,7 +166,7 @@ git push origin main
 
 ### 5.1 Adicionar Environment Variables
 
-No serviço `decreto-scraper`, vá em **Environment** ou **Env Variables**.
+No serviço `scraper-decreto-rec-e-dps`, vá em **Environment** ou **Env Variables**.
 
 Adicione cada variável abaixo:
 
@@ -210,7 +210,7 @@ Adicione cada variável abaixo:
 
 ### 6.1 Executar uma vez manualmente
 
-1. No serviço `decreto-scraper`, vá em **Console** ou **Terminal**
+1. No serviço `scraper-decreto-rec-e-dps`, vá em **Console** ou **Terminal**
 2. Execute:
 
 ```bash
