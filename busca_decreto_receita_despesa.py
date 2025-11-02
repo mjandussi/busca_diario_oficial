@@ -160,24 +160,19 @@ def fetch_publications(search_term: str = SEARCH_TERM) -> List[str]:
         safe_click_with_retry(driver, (By.NAME, "buscar"), wait_time=15, max_retries=3)
         logger.info("Botão de busca clicado")
 
-        # Aguardar resultados
-        tbody = WebDriverWait(driver, 15).until(
-            EC.presence_of_element_located((By.XPATH, "//tbody"))
-        )
+        # Aguardar resultados aparecerem (sem guardar referência a elementos)
+        results_locator = (By.CSS_SELECTOR, "table tbody tr")
+        try:
+            WebDriverWait(driver, 20).until(EC.presence_of_element_located(results_locator))
+            logger.info("Resultados carregados com sucesso")
+        except TimeoutException as exc:
+            logger.error("Resultados não carregaram a tempo", exc_info=True)
+            raise
 
-        # Extrair textos das linhas
-        rows = tbody.find_elements(By.TAG_NAME, "tr")
-        texts = []
-        for row in rows:
-            cells = row.find_elements(By.TAG_NAME, "td")
-            row_text = " ".join([cell.text for cell in cells])
-            texts.append(row_text)
-
-        all_text = " ".join(texts)
-
-        # Extrair datas com regex
+        # Extrair datas diretamente do HTML da página (evita stale elements)
+        page_html = driver.page_source
         date_pattern = r'\b\d{2}/\d{2}/\d{4}\b'
-        dates = re.findall(date_pattern, all_text)
+        dates = re.findall(date_pattern, page_html)
 
         logger.info(f"Encontradas {len(dates)} datas na busca")
         return dates
