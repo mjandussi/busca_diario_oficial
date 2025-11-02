@@ -50,18 +50,18 @@ git push origin main
 1. Clique em **+ Create Service** ou **New Service**
 2. Selecione **Database** → **PostgreSQL**
 3. Preencha:
-   - **Name:** `decreto-postgres` (ou nome de sua preferência)
-   - **Database:** `decreto_oficial`
-   - **Username:** `decreto_user`
+   - **Name:** `decreto-rec-e-dps-postgres` (ou nome de sua preferência)
+   - **Database:** `decreto-rec-e-dps`
+   - **Username:** `postgres`
    - **Password:** Clique em **Generate** (copie a senha gerada!)
-   - **Version:** `16` ou mais recente
+   - **Version:** `postgres:17` 
 4. Clique em **Create**
 5. **Aguarde** o PostgreSQL inicializar (status deve ficar verde)
 
 ### 2.3 Anotar credenciais
 
 O EasyPanel vai gerar automaticamente:
-- **Internal Hostname:** algo como `decreto-postgres` (use este para conexão interna)
+- **Internal Hostname:** algo como `decreto-rec-e-dps-postgres` (use este para conexão interna)
 - **Port:** `5432` (porta padrão interna)
 - **Password:** A senha que foi gerada
 
@@ -77,7 +77,7 @@ O EasyPanel vai gerar automaticamente:
 2. Execute:
 
 ```bash
-psql -U decreto_user -d decreto_oficial
+psql -U postgres -d decreto-rec-e-dps
 ```
 
 3. Cole o conteúdo do arquivo `schema.sql` (copie do seu PC)
@@ -89,7 +89,7 @@ psql -U decreto_user -d decreto_oficial
 3. No terminal, execute:
 
 ```bash
-psql -U decreto_user -d decreto_oficial -f /path/to/schema.sql
+psql -U postgres -d decreto-rec-e-dps -f /path/to/schema.sql
 ```
 
 ### 3.2 Verificar tabelas criadas
