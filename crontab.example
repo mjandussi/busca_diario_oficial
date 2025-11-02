@@ -1,0 +1,32 @@
+# Exemplo de configuração do crontab para execução diária do scraper
+# Execute: crontab -e e adicione a linha abaixo (ajuste os caminhos)
+
+# Executa todos os dias às 11:30 (horário do servidor)
+# Logs são redirecionados para /var/log/decreto.log
+30 11 * * * /caminho/para/.venv/bin/python /caminho/para/busca_diario_oficial/busca_decreto_receita_despesa.py >> /var/log/decreto.log 2>&1
+
+# Explicação dos campos:
+# ┌───────────── minuto (0 - 59)
+# │ ┌───────────── hora (0 - 23)
+# │ │ ┌───────────── dia do mês (1 - 31)
+# │ │ │ ┌───────────── mês (1 - 12)
+# │ │ │ │ ┌───────────── dia da semana (0 - 6) (Domingo=0)
+# │ │ │ │ │
+# * * * * * comando a ser executado
+
+# Outras opções úteis:
+
+# Executar a cada 6 horas (00:00, 06:00, 12:00, 18:00)
+# 0 */6 * * * /caminho/para/.venv/bin/python /caminho/para/busca_diario_oficial/busca_decreto_receita_despesa.py >> /var/log/decreto.log 2>&1
+
+# Executar apenas nos dias úteis (segunda a sexta) às 11:30
+# 30 11 * * 1-5 /caminho/para/.venv/bin/python /caminho/para/busca_diario_oficial/busca_decreto_receita_despesa.py >> /var/log/decreto.log 2>&1
+
+# Executar duas vezes por dia: 09:00 e 15:00
+# 0 9,15 * * * /caminho/para/.venv/bin/python /caminho/para/busca_diario_oficial/busca_decreto_receita_despesa.py >> /var/log/decreto.log 2>&1
+
+# IMPORTANTE: Certifique-se de:
+# 1. Ajustar os caminhos absolutos para seu ambiente
+# 2. Verificar se o usuário do cron tem permissão de escrita em /var/log/
+# 3. Testar o comando manualmente antes de adicionar ao crontab
+# 4. Verificar se as variáveis de ambiente do .env estão sendo carregadas
