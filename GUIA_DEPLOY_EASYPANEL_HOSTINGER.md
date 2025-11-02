@@ -80,17 +80,11 @@ O EasyPanel vai gerar automaticamente:
 psql -U postgres -d decreto-rec-e-dps
 ```
 
-3. Cole o conteúdo do arquivo `schema.sql` (copie do seu PC)
+3. SQL Compacto (Copiar Tudo de Uma Vez):
 
-**Ou se o EasyPanel permitir upload de arquivos:**
+```sql
+CREATE TABLE IF NOT EXISTS decree_publications (publication_date DATE PRIMARY KEY, raw_title TEXT, first_seen_at TIMESTAMPTZ DEFAULT NOW(), search_term VARCHAR(50) DEFAULT '46930'); CREATE TABLE IF NOT EXISTS notifications_log (id SERIAL PRIMARY KEY, publication_date DATE NOT NULL REFERENCES decree_publications(publication_date), sent_at TIMESTAMPTZ DEFAULT NOW(), email_to TEXT NOT NULL, status VARCHAR(20) DEFAULT 'sent', error_message TEXT); CREATE INDEX IF NOT EXISTS idx_first_seen_at ON decree_publications(first_seen_at DESC); CREATE INDEX IF NOT EXISTS idx_notifications_date ON notifications_log(publication_date); CREATE INDEX IF NOT EXISTS idx_notifications_sent_at ON notifications_log(sent_at DESC); CREATE OR REPLACE VIEW recent_publications AS SELECT publication_date, raw_title, first_seen_at, CASE WHEN first_seen_at > NOW() - INTERVAL '24 hours' THEN true ELSE false END AS is_new FROM decree_publications ORDER BY publication_date DESC;
 
-1. Clique em **Files** ou **File Manager**
-2. Faça upload do `schema.sql`
-3. No terminal, execute:
-
-```bash
-psql -U postgres -d decreto-rec-e-dps -f /path/to/schema.sql
-```
 
 ### 3.2 Verificar tabelas criadas
 
@@ -113,7 +107,7 @@ No console psql:
 1. No EasyPanel, clique em **+ Create Service**
 2. Selecione **App** → **From GitHub**
 3. Preencha:
-   - **Name:** `decreto-scraper`
+   - **Name:** `scraper-decreto-rec-e-dps`
    - **Repository:** Conecte sua conta GitHub e selecione o repo `busca_diario_oficial`
    - **Branch:** `main`
    - **Build Method:** `Dockerfile` (vamos criar um)
