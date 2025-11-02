@@ -174,6 +174,10 @@ def fetch_publications(search_term: str = SEARCH_TERM) -> List[str]:
         date_pattern = r'\b\d{2}/\d{2}/\d{4}\b'
         dates = re.findall(date_pattern, page_html)
 
+        with open("last_page.html", "w", encoding="utf-8") as f:
+            f.write(page_html)
+        logger.info("HTML salvo em last_page.html")
+
         logger.info(f"Encontradas {len(dates)} datas na busca")
         return dates
 

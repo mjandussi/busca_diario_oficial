@@ -184,11 +184,11 @@ Adicione cada variável abaixo:
 
 | Key | Value |
 |-----|-------|
-| `POSTGRES_HOST` | `decreto-postgres` ← hostname interno |
+| `POSTGRES_HOST` | `busca_diario_oficial_decreto-rec-e-dps-postgres` ← hostname interno |
 | `POSTGRES_PORT` | `5432` |
-| `POSTGRES_DB` | `decreto_oficial` |
-| `POSTGRES_USER` | `decreto_user` |
-| `POSTGRES_PASSWORD` | `senha_gerada_no_passo_2.2` |
+| `POSTGRES_DB` | `decreto-rec-e-dps` |
+| `POSTGRES_USER` | `postgres` |
+| `POSTGRES_PASSWORD` | `senha` |
 
 #### Scraping
 
