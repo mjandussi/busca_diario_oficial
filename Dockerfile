@@ -22,5 +22,5 @@ COPY . .
 # Criar diretório para logs
 RUN mkdir -p /var/log
 
-# Comando padrão (mantém container rodando para cron jobs)
-CMD ["tail", "-f", "/dev/null"]
+# Comando padrão (executa scheduler que roda diariamente às 11:30)
+CMD ["python", "scheduler.py"]
