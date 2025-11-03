@@ -3,3 +3,4 @@ selenium==4.23.1
 psycopg[binary]==3.1.18
 python-dotenv==1.0.1
 schedule==1.2.0
+holidays==0.62
