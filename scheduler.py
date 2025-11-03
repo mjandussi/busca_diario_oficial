@@ -53,7 +53,7 @@ schedule.every().day.at("11:30").do(run_scraper)
 logger.info("=" * 60)
 logger.info("SCHEDULER INICIADO!")
 logger.info("Horário configurado: 11:30 (diariamente)")
-logger.info("Timezone: America/Sao_Paulo (configurar TZ nas env vars)")
+logger.info("Timezone: America/Sao_Paulo")
 logger.info("Aguardando próxima execução...")
 logger.info("=" * 60)
 
