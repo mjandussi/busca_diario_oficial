@@ -1,6 +1,6 @@
 """
 Scheduler para execução automática do scraper do Decreto 46930
-Roda diariamente às 11:30 (horário de Brasília)
+Roda diariamente no horário configurado no fuso definido (America/Sao_Paulo por padrão).
 Pula sábados, domingos e feriados (nacionais + opcionais por estado/município)
 """
 
@@ -34,7 +34,7 @@ FERIADOS_CUSTOM = {
 }
 
 # Horário (HH:MM) no TZ definido
-HORARIO = "20:58"
+HORARIO = "09:30"
 
 # ====================== Logging ======================
 
@@ -87,7 +87,7 @@ def eh_feriado(d: date) -> bool:
 
 
 def run_scraper():
-    """Executa o scraper às 11:30, pulando fds e feriados (no TZ configurado)."""
+    """Executa o scraper às 09:30, pulando fds e feriados (no TZ configurado)."""
     try:
         now = datetime.now(TZ)
         hoje = now.date()
