@@ -1,6 +1,6 @@
 """
-Script para monitoramento de publicações do Decreto 46930 no Diário Oficial do RJ
-Realiza scraping do site do DOERJ, armazena datas em PostgreSQL e envia email quando há novas publicações
+Script para monitoramento de publicações no Diário Oficial do RJ
+Realiza scraping do site do DOERJ, armazena datas em PostgreSQL e envia email quando há novas publicações das palavras escolhidas.
 """
 
 import os
@@ -132,7 +132,8 @@ def safe_click_with_retry(driver, locator, wait_time=15, max_retries=3):
     return False
 
 
-def fetch_publications(search_term: str = SEARCH_TERM) -> List[str]:
+#def fetch_publications(search_term: str = SEARCH_TERM) -> List[str]:
+def fetch_publications(search_term: str):
     """
     Realiza scraping do site do DOERJ e retorna lista de datas encontradas
 
@@ -215,41 +216,34 @@ def normalize_dates(date_strings: List[str]) -> List[datetime.date]:
     return unique_dates
 
 
-def upsert_publications(conn, dates: List[datetime.date]) -> List[datetime.date]:
+def upsert_publications(conn, dates: List[datetime.date], search_term: str):
     """
-    Insere datas no banco e retorna quais são novas
-
-    Args:
-        conn: Conexão com o banco PostgreSQL
-        dates: Lista de datas para inserir
-
-    Returns:
-        Lista de datas que são novas (não existiam no banco)
+    Insere datas no banco associadas ao termo de busca.
+    Retorna apenas as datas novas.
     """
     new_dates = []
 
     try:
         with conn.cursor() as cur:
             for date in dates:
-                # Tentar inserir, ignorando se já existe
                 cur.execute(
                     """
                     INSERT INTO decree_publications (publication_date, search_term)
                     VALUES (%s, %s)
-                    ON CONFLICT (publication_date) DO NOTHING
+                    ON CONFLICT (publication_date, search_term) DO NOTHING
                     RETURNING publication_date
                     """,
-                    (date, SEARCH_TERM)
+                    (date, search_term)
                 )
 
-                # Se retornou algo, é porque inseriu (data nova)
                 result = cur.fetchone()
                 if result:
                     new_dates.append(date)
-                    logger.info(f"Nova publicação encontrada: {date.strftime('%d/%m/%Y')}")
+                    logger.info(
+                        f"Nova publicação para '{search_term}': {date.strftime('%d/%m/%Y')}"
+                    )
 
         conn.commit()
-        logger.info(f"{len(new_dates)} novas publicações inseridas no banco")
 
     except Exception as e:
         conn.rollback()
@@ -259,99 +253,214 @@ def upsert_publications(conn, dates: List[datetime.date]) -> List[datetime.date]
     return new_dates
 
 
-def send_email(new_dates: List[datetime.date]):
-    """
-    Envia email notificando sobre novas publicações
 
-    Args:
-        new_dates: Lista de datas novas para incluir no email
+# def upsert_publications(conn, dates: List[datetime.date]) -> List[datetime.date]:
+#     """
+#     Insere datas no banco e retorna quais são novas
+
+#     Args:
+#         conn: Conexão com o banco PostgreSQL
+#         dates: Lista de datas para inserir
+
+#     Returns:
+#         Lista de datas que são novas (não existiam no banco)
+#     """
+#     new_dates = []
+
+#     try:
+#         with conn.cursor() as cur:
+#             for date in dates:
+#                 # Tentar inserir, ignorando se já existe
+#                 cur.execute(
+#                     """
+#                     INSERT INTO decree_publications (publication_date, search_term)
+#                     VALUES (%s, %s)
+#                     ON CONFLICT (publication_date) DO NOTHING
+#                     RETURNING publication_date
+#                     """,
+#                     (date, SEARCH_TERM)
+#                 )
+
+#                 # Se retornou algo, é porque inseriu (data nova)
+#                 result = cur.fetchone()
+#                 if result:
+#                     new_dates.append(date)
+#                     logger.info(f"Nova publicação encontrada: {date.strftime('%d/%m/%Y')}")
+
+#         conn.commit()
+#         logger.info(f"{len(new_dates)} novas publicações inseridas no banco")
+
+#     except Exception as e:
+#         conn.rollback()
+#         logger.error(f"Erro ao inserir publicações no banco: {e}")
+#         raise
+
+#     return new_dates
+
+
+def send_email(new_dates: List[datetime.date], search_term: str):
+    """
+    Envia email notificando sobre novas publicações de um termo específico.
     """
     if not new_dates:
-        logger.info("Nenhuma data nova para notificar")
         return
 
     try:
-        # Configurações de email
         email_user = os.getenv("EMAIL_USER")
         email_password = os.getenv("EMAIL_PASSWORD")
         email_recipients = os.getenv("EMAIL_RECIPIENTS", "").split(",")
         smtp_host = os.getenv("SMTP_HOST", "smtp.gmail.com")
         smtp_port = int(os.getenv("SMTP_PORT", "587"))
 
-        if not email_user or not email_password:
-            logger.error("Credenciais de email não configuradas")
-            return
+        dates_html = "<br>".join(
+            f"• {d.strftime('%d/%m/%Y')}" for d in new_dates
+        )
 
-        # Formatar datas para o corpo do email
-        dates_formatted = [date.strftime("%d/%m/%Y") for date in new_dates]
-        dates_html = "<br>".join([f"• {date}" for date in dates_formatted])
-
-        # Criar mensagem
         msg = EmailMessage()
-        msg['Subject'] = f'ALERTA: Novas publicações do Decreto {SEARCH_TERM}'
-        msg['From'] = email_user
-        msg['To'] = ", ".join(email_recipients)
+        msg["Subject"] = f"ALERTA: Novas publicações encontradas para '{search_term}'"
+        msg["From"] = email_user
+        msg["To"] = ", ".join(email_recipients)
 
         corpo_email = f"""
         <html>
         <body>
             <p>Prezados,</p>
-            <p><b>Foram encontradas {len(new_dates)} nova(s) publicação(ões) do Decreto {SEARCH_TERM} no Diário Oficial:</b></p>
+            <p>Foram encontradas <b>{len(new_dates)}</b> nova(s) publicação(ões) no DOERJ para o termo:</p>
+            <p><b>{search_term}</b></p>
             <p>{dates_html}</p>
-            <p>Acesse o <a href="{DIARIO_URL}">Diário Oficial</a> para consultar os detalhes.</p>
             <br>
-            <p><em>Mensagem automática gerada em {datetime.now().strftime('%d/%m/%Y às %H:%M:%S')}</em></p>
+            <p><em>Gerado automaticamente em {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}</em></p>
         </body>
         </html>
         """
 
-        msg.set_content(corpo_email, subtype='html')
+        msg.set_content(corpo_email, subtype="html")
 
-        # Enviar email
         with smtplib.SMTP(smtp_host, smtp_port) as server:
             server.starttls()
             server.login(email_user, email_password)
             server.send_message(msg)
 
-        logger.info(f"Email enviado com sucesso para {len(email_recipients)} destinatário(s)")
+        logger.info(
+            f"E-mail enviado ({search_term}) para {len(email_recipients)} destinatários"
+        )
 
     except Exception as e:
         logger.error(f"Erro ao enviar email: {e}")
         raise
 
 
+
+# def send_email(new_dates: List[datetime.date]):
+#     """
+#     Envia email notificando sobre novas publicações
+
+#     Args:
+#         new_dates: Lista de datas novas para incluir no email
+#     """
+#     if not new_dates:
+#         logger.info("Nenhuma data nova para notificar")
+#         return
+
+#     try:
+#         # Configurações de email
+#         email_user = os.getenv("EMAIL_USER")
+#         email_password = os.getenv("EMAIL_PASSWORD")
+#         email_recipients = os.getenv("EMAIL_RECIPIENTS", "").split(",")
+#         smtp_host = os.getenv("SMTP_HOST", "smtp.gmail.com")
+#         smtp_port = int(os.getenv("SMTP_PORT", "587"))
+
+#         if not email_user or not email_password:
+#             logger.error("Credenciais de email não configuradas")
+#             return
+
+#         # Formatar datas para o corpo do email
+#         dates_formatted = [date.strftime("%d/%m/%Y") for date in new_dates]
+#         dates_html = "<br>".join([f"• {date}" for date in dates_formatted])
+
+#         # Criar mensagem
+#         msg = EmailMessage()
+#         msg['Subject'] = f'ALERTA: Novas publicações do Decreto {SEARCH_TERM}'
+#         msg['From'] = email_user
+#         msg['To'] = ", ".join(email_recipients)
+
+#         corpo_email = f"""
+#         <html>
+#         <body>
+#             <p>Prezados,</p>
+#             <p><b>Foram encontradas {len(new_dates)} nova(s) publicação(ões) do Decreto {SEARCH_TERM} no Diário Oficial:</b></p>
+#             <p>{dates_html}</p>
+#             <p>Acesse o <a href="{DIARIO_URL}">Diário Oficial</a> para consultar os detalhes.</p>
+#             <br>
+#             <p><em>Mensagem automática gerada em {datetime.now().strftime('%d/%m/%Y às %H:%M:%S')}</em></p>
+#         </body>
+#         </html>
+#         """
+
+#         msg.set_content(corpo_email, subtype='html')
+
+#         # Enviar email
+#         with smtplib.SMTP(smtp_host, smtp_port) as server:
+#             server.starttls()
+#             server.login(email_user, email_password)
+#             server.send_message(msg)
+
+#         logger.info(f"Email enviado com sucesso para {len(email_recipients)} destinatário(s)")
+
+#     except Exception as e:
+#         logger.error(f"Erro ao enviar email: {e}")
+#         raise
+
+
+
 def main():
-    """Função principal que orquestra o fluxo de execução"""
+    """Executa o monitoramento para todos os termos de busca"""
     try:
         logger.info("=" * 60)
-        logger.info("Iniciando execução do scraper do Decreto 46930")
+        logger.info("Iniciando execução do scraper (múltiplos termos)")
         logger.info("=" * 60)
 
-        # 1. Buscar publicações no site
-        date_strings = fetch_publications(SEARCH_TERM)
+        # Carregar lista de termos do .env
+        search_terms_raw = os.getenv("SEARCH_TERMS", "")
+        search_terms = [t.strip() for t in search_terms_raw.split(",") if t.strip()]
 
-        if not date_strings:
-            logger.warning("Nenhuma data encontrada na busca")
+        if not search_terms:
+            logger.error("Nenhum termo definido em SEARCH_TERMS")
             return
 
-        # 2. Normalizar datas
-        dates = normalize_dates(date_strings)
+        logger.info(f"Monitorando {len(search_terms)} termo(s): {search_terms}")
 
-        # 3. Conectar ao banco e inserir/verificar datas novas
         conn = get_db_connection()
-        try:
-            new_dates = upsert_publications(conn, dates)
 
-            # 4. Enviar email se houver datas novas
+        for term in search_terms:
+            logger.info("-" * 60)
+            logger.info(f"Iniciando busca para termo: {term}")
+            logger.info("-" * 60)
+
+            # 1. Buscar publicações
+            date_strings = fetch_publications(term)
+
+            if not date_strings:
+                logger.warning(f"Nenhuma data encontrada para '{term}'")
+                continue
+
+            # 2. Normalizar datas
+            dates = normalize_dates(date_strings)
+
+            # 3. Inserir no banco (agora passando o termo!)
+            new_dates = upsert_publications(conn, dates, term)
+
+            # 4. Enviar e-mail por termo
             if new_dates:
-                send_email(new_dates)
-                logger.info(f"Processo concluído: {len(new_dates)} novas publicações notificadas")
+                send_email(new_dates, term)
+                logger.info(
+                    f"Termo '{term}': {len(new_dates)} novas publicações notificadas"
+                )
             else:
-                logger.info("Processo concluído: nenhuma nova publicação encontrada")
+                logger.info(f"Termo '{term}': nenhuma nova publicação encontrada")
 
-        finally:
-            conn.close()
-            logger.info("Conexão com banco fechada")
+        conn.close()
+        logger.info("Conexão com banco fechada")
 
         logger.info("=" * 60)
         logger.info("Execução finalizada com sucesso")
@@ -362,5 +471,47 @@ def main():
         sys.exit(1)
 
 
-if __name__ == "__main__":
-    main()
+# def main():
+#     """Função principal que orquestra o fluxo de execução"""
+#     try:
+#         logger.info("=" * 60)
+#         logger.info("Iniciando execução do scraper do Decreto 46930")
+#         logger.info("=" * 60)
+
+#         # 1. Buscar publicações no site
+#         date_strings = fetch_publications(SEARCH_TERM)
+
+#         if not date_strings:
+#             logger.warning("Nenhuma data encontrada na busca")
+#             return
+
+#         # 2. Normalizar datas
+#         dates = normalize_dates(date_strings)
+
+#         # 3. Conectar ao banco e inserir/verificar datas novas
+#         conn = get_db_connection()
+#         try:
+#             new_dates = upsert_publications(conn, dates)
+
+#             # 4. Enviar email se houver datas novas
+#             if new_dates:
+#                 send_email(new_dates)
+#                 logger.info(f"Processo concluído: {len(new_dates)} novas publicações notificadas")
+#             else:
+#                 logger.info("Processo concluído: nenhuma nova publicação encontrada")
+
+#         finally:
+#             conn.close()
+#             logger.info("Conexão com banco fechada")
+
+#         logger.info("=" * 60)
+#         logger.info("Execução finalizada com sucesso")
+#         logger.info("=" * 60)
+
+#     except Exception as e:
+#         logger.error(f"Erro crítico na execução: {e}")
+#         sys.exit(1)
+
+
+# if __name__ == "__main__":
+#     main()
