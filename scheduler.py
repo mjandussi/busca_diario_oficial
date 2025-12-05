@@ -34,7 +34,7 @@ FERIADOS_CUSTOM = {
 }
 
 # Horário (HH:MM) no TZ definido
-HORARIO = "09:05"
+HORARIO = "09:20"
 
 # ====================== Logging ======================
 
